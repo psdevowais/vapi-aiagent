@@ -80,3 +80,12 @@ class GoogleAuthStatusView(APIView):
             GoogleOAuthToken.objects.filter(id=1).exists()
         )
         return JsonResponse({'is_authorized': is_configured})
+
+
+class GoogleDisconnectView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def delete(self, request):
+        GoogleOAuthToken.objects.filter(id=1).delete()
+        return JsonResponse({'disconnected': True})

@@ -10,7 +10,10 @@ from googleapiclient.discovery import build
 from .oauth_models import GoogleOAuthToken
 
 
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/gmail.send',
+]
 
 
 def get_client_config():
@@ -136,3 +139,67 @@ def append_lead_row(values: list[str]) -> None:
         insertDataOption='INSERT_ROWS',
         body={'values': [values]},
     ).execute()
+
+
+def send_urgent_lead_email(lead_data: dict) -> bool:
+    admin_email = os.environ.get('ADMIN_EMAIL', '').strip()
+    if not admin_email:
+        return False
+
+    creds = get_or_refresh_credentials()
+    if not creds:
+        return False
+
+    import base64
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
+    service = build('gmail', 'v1', credentials=creds)
+
+    message = MIMEMultipart('alternative')
+    message['To'] = admin_email
+    message['Subject'] = f"Urgent Lead: {lead_data.get('customer_name', 'New Lead')}"
+
+    html_body = f"""
+    <html>
+      <body>
+        <h2>Urgent Lead Notification</h2>
+        <table style="border-collapse: collapse; width: 100%;">
+          <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Customer Name</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead_data.get('customer_name', 'N/A')}</td></tr>
+          <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Phone</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead_data.get('phone', 'N/A')}</td></tr>
+          <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Email</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead_data.get('email', 'N/A')}</td></tr>
+          <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Property Address</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead_data.get('property_address', 'N/A')}</td></tr>
+          <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Priority</strong></td><td style="padding: 8px; border: 1px solid #ddd; color: red; font-weight: bold;">{lead_data.get('call_priority', 'N/A')}</td></tr>
+        </table>
+        <p style="margin-top: 16px;">This lead has been automatically synced to Google Sheets.</p>
+      </body>
+    </html>
+    """
+
+    text_body = f"""
+Urgent Lead Notification
+
+Customer Name: {lead_data.get('customer_name', 'N/A')}
+Phone: {lead_data.get('phone', 'N/A')}
+Email: {lead_data.get('email', 'N/A')}
+Property Address: {lead_data.get('property_address', 'N/A')}
+Priority: {lead_data.get('call_priority', 'N/A')}
+
+This lead has been automatically synced to Google Sheets.
+    """
+
+    part1 = MIMEText(text_body, 'plain')
+    part2 = MIMEText(html_body, 'html')
+    message.attach(part1)
+    message.attach(part2)
+
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')
+
+    try:
+        service.users().messages().send(
+            userId='me',
+            body={'raw': raw_message}
+        ).execute()
+        return True
+    except Exception:
+        return False

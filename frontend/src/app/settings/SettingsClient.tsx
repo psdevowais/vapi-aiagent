@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { AgentSettings, getSettings, updateSettings, getGoogleAuthStatus, getGoogleAuthUrl } from "@/lib/api";
+import { AgentSettings, getSettings, updateSettings, getGoogleAuthStatus, getGoogleAuthUrl, disconnectGoogle } from "@/lib/api";
 
 export function SettingsClient() {
   const [loading, setLoading] = useState(true);
@@ -69,6 +69,15 @@ export function SettingsClient() {
       }, 500);
     } catch {
       setGoogleSigningIn(false);
+    }
+  }
+
+  async function handleGoogleDisconnect() {
+    try {
+      await disconnectGoogle();
+      setGoogleAuthorized(false);
+    } catch {
+      // ignore
     }
   }
 
@@ -184,9 +193,12 @@ export function SettingsClient() {
             </button>
           )}
           {googleAuthorized && (
-            <div className="inline-flex h-10 items-center justify-center rounded-lg border border-green-500 bg-green-50 px-4 text-sm font-semibold text-green-700">
-              Authorized
-            </div>
+            <button
+              onClick={handleGoogleDisconnect}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-red-500 bg-red-50 px-4 text-sm font-semibold text-red-700 hover:bg-red-100"
+            >
+              Disconnect
+            </button>
           )}
         </div>
       </div>

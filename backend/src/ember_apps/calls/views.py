@@ -12,7 +12,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ember_apps.leads.google_sheets import append_lead_row
+from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email
 from ember_apps.leads.models import Lead
 
 from .models import AgentSettings, Call, TranscriptEvent
@@ -241,6 +241,13 @@ class VapiWebhookView(APIView):
                             lead.created_at.isoformat(),
                         ]
                     )
+                    send_urgent_lead_email({
+                        'customer_name': lead.customer_name,
+                        'phone': lead.phone,
+                        'email': lead.email,
+                        'property_address': lead.property_address,
+                        'call_priority': lead.call_priority,
+                    })
 
         return Response({'ok': True})
 

@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from ember_apps.leads.google_sheets import append_lead_row
+from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email
 from ember_apps.leads.models import Lead
 
 from .models import Call, TranscriptEvent
@@ -139,6 +139,16 @@ class VoiceConsumer(AsyncWebsocketConsumer):
                                 lead_obj.call_priority,
                                 lead_obj.created_at.isoformat(),
                             ],
+                        )
+                        await asyncio.to_thread(
+                            send_urgent_lead_email,
+                            {
+                                'customer_name': lead_obj.customer_name,
+                                'phone': lead_obj.phone,
+                                'email': lead_obj.email,
+                                'property_address': lead_obj.property_address,
+                                'call_priority': lead_obj.call_priority,
+                            },
                         )
                 return
 

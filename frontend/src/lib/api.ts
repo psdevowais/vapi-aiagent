@@ -114,3 +114,9 @@ export function getGoogleAuthStatus(): Promise<GoogleAuthStatus> {
 export function getGoogleAuthUrl(): Promise<GoogleAuthUrl> {
   return apiFetch<GoogleAuthUrl>("/auth/google/");
 }
+
+export function disconnectGoogle(): Promise<{ disconnected: boolean }> {
+  return apiFetch<{ disconnected: boolean }>("/auth/google/disconnect/", {
+    method: "DELETE",
+  });
+}
