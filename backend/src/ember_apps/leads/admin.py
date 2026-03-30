@@ -1,3 +1,17 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Lead
+from .oauth_models import GoogleOAuthToken
+
+
+@admin.register(Lead)
+class LeadAdmin(admin.ModelAdmin):
+    list_display = ['customer_name', 'phone', 'email', 'property_address', 'call_priority', 'created_at']
+    list_filter = ['call_priority', 'created_at']
+    search_fields = ['customer_name', 'phone', 'email', 'property_address']
+
+
+@admin.register(GoogleOAuthToken)
+class GoogleOAuthTokenAdmin(admin.ModelAdmin):
+    list_display = ['id', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']

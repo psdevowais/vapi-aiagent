@@ -98,3 +98,19 @@ export function updateSettings(patch: Partial<AgentSettings>): Promise<AgentSett
     body: JSON.stringify(patch),
   });
 }
+
+export type GoogleAuthStatus = {
+  is_authorized: boolean;
+};
+
+export type GoogleAuthUrl = {
+  authorization_url: string;
+};
+
+export function getGoogleAuthStatus(): Promise<GoogleAuthStatus> {
+  return apiFetch<GoogleAuthStatus>("/auth/google/status/");
+}
+
+export function getGoogleAuthUrl(): Promise<GoogleAuthUrl> {
+  return apiFetch<GoogleAuthUrl>("/auth/google/");
+}

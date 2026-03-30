@@ -230,13 +230,14 @@ class VapiWebhookView(APIView):
                     update_type=update_type,
                     additional_notes=additional_notes,
                 )
-                if created:
+                if created and call_priority.lower() == 'urgent':
                     append_lead_row(
                         [
                             lead.customer_name,
                             lead.property_address,
                             lead.phone,
                             lead.email,
+                            lead.call_priority,
                             lead.created_at.isoformat(),
                         ]
                     )

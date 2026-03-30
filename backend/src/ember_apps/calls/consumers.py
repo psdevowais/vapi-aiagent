@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from ember_apps.leads.google_sheets import append_lead_row
 from ember_apps.leads.models import Lead
 
 from .models import Call, TranscriptEvent
@@ -105,9 +106,10 @@ class VoiceConsumer(AsyncWebsocketConsumer):
                 email = str(lead.get("caller_email") or lead.get("email") or "").strip()
 
                 if customer_name and phone and email:
+                    call_priority = str(lead.get("call_priority") or "").strip()
                     defaults = {
                         "call_reason": str(lead.get("call_reason") or "").strip(),
-                        "call_priority": str(lead.get("call_priority") or "").strip(),
+                        "call_priority": call_priority,
                         "property_address": str(lead.get("property_address") or "").strip(),
                         "property_type": str(lead.get("property_type") or "").strip(),
                         "bedrooms": str(lead.get("bedrooms") or "").strip(),
@@ -118,13 +120,26 @@ class VoiceConsumer(AsyncWebsocketConsumer):
                         "additional_notes": str(lead.get("additional_notes") or "").strip(),
                     }
 
-                    await Lead.objects.aget_or_create(
+                    lead_obj, created = await Lead.objects.aget_or_create(
                         call_id=self.call_id,
                         customer_name=customer_name,
                         phone=phone,
                         email=email,
                         defaults=defaults,
                     )
+                    if created and call_priority.lower() == "urgent":
+                        import asyncio
+                        await asyncio.to_thread(
+                            append_lead_row,
+                            [
+                                lead_obj.customer_name,
+                                lead_obj.property_address,
+                                lead_obj.phone,
+                                lead_obj.email,
+                                lead_obj.call_priority,
+                                lead_obj.created_at.isoformat(),
+                            ],
+                        )
                 return
 
         if bytes_data:
