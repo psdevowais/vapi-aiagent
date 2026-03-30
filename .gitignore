@@ -1,0 +1,19 @@
+# Env files
+.env
+.env.local
+.env.*
+
+# Node
+node_modules/
+.next/
+
+# Python
+.venv/
+venv/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
