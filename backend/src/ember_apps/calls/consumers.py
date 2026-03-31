@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email
+from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email, append_normal_lead_row
 from ember_apps.leads.models import Lead
 
 from .models import Call, TranscriptEvent
@@ -111,12 +111,9 @@ class VoiceConsumer(AsyncWebsocketConsumer):
                         "call_reason": str(lead.get("call_reason") or "").strip(),
                         "call_priority": call_priority,
                         "property_address": str(lead.get("property_address") or "").strip(),
-                        "property_type": str(lead.get("property_type") or "").strip(),
-                        "bedrooms": str(lead.get("bedrooms") or "").strip(),
-                        "bathrooms": str(lead.get("bathrooms") or "").strip(),
                         "occupancy_status": str(lead.get("occupancy_status") or "").strip(),
                         "sell_timeline": str(lead.get("sell_timeline") or "").strip(),
-                        "update_type": str(lead.get("update_type") or "").strip(),
+                        "intent": str(lead.get("intent") or "").strip(),
                         "additional_notes": str(lead.get("additional_notes") or "").strip(),
                     }
 
@@ -127,29 +124,46 @@ class VoiceConsumer(AsyncWebsocketConsumer):
                         email=email,
                         defaults=defaults,
                     )
-                    if created and call_priority.lower() == "urgent":
+                    if created:
                         import asyncio
-                        await asyncio.to_thread(
-                            append_lead_row,
-                            [
-                                lead_obj.customer_name,
-                                lead_obj.property_address,
-                                lead_obj.phone,
-                                lead_obj.email,
-                                lead_obj.call_priority,
-                                lead_obj.created_at.isoformat(),
-                            ],
-                        )
-                        await asyncio.to_thread(
-                            send_urgent_lead_email,
-                            {
-                                'customer_name': lead_obj.customer_name,
-                                'phone': lead_obj.phone,
-                                'email': lead_obj.email,
-                                'property_address': lead_obj.property_address,
-                                'call_priority': lead_obj.call_priority,
-                            },
-                        )
+                        if call_priority.lower() == "urgent":
+                            await asyncio.to_thread(
+                                append_lead_row,
+                                [
+                                    lead_obj.customer_name,
+                                    lead_obj.property_address,
+                                    lead_obj.phone,
+                                    lead_obj.email,
+                                    lead_obj.call_priority,
+                                    lead_obj.created_at.isoformat(),
+                                ],
+                            )
+                            await asyncio.to_thread(
+                                send_urgent_lead_email,
+                                {
+                                    'customer_name': lead_obj.customer_name,
+                                    'phone': lead_obj.phone,
+                                    'email': lead_obj.email,
+                                    'property_address': lead_obj.property_address,
+                                    'call_priority': lead_obj.call_priority,
+                                },
+                            )
+                        else:
+                            await asyncio.to_thread(
+                                append_normal_lead_row,
+                                {
+                                    'customer_name': lead_obj.customer_name,
+                                    'phone': lead_obj.phone,
+                                    'email': lead_obj.email,
+                                    'property_address': lead_obj.property_address,
+                                    'call_priority': lead_obj.call_priority,
+                                    'sell_timeline': lead_obj.sell_timeline,
+                                    'additional_notes': lead_obj.additional_notes,
+                                    'occupancy_status': lead_obj.occupancy_status,
+                                    'call_reason': lead_obj.call_reason,
+                                    'intent': lead_obj.intent,
+                                },
+                            )
                 return
 
         if bytes_data:

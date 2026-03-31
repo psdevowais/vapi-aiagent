@@ -141,6 +141,42 @@ def append_lead_row(values: list[str]) -> None:
     ).execute()
 
 
+def append_normal_lead_row(lead_data: dict) -> None:
+    spreadsheet_id = os.environ.get('GOOGLE_SHEETS_SPREADSHEET_ID', '').strip()
+    if not spreadsheet_id:
+        return
+
+    creds = get_or_refresh_credentials()
+    if not creds:
+        return
+
+    service = build('sheets', 'v4', credentials=creds)
+    sheets = service.spreadsheets()
+
+    worksheet_name = os.environ.get('GOOGLE_SHEETS_NORMAL_WORKSHEET_NAME', 'Normal Leads').strip() or 'Normal Leads'
+
+    values = [
+        lead_data.get('customer_name', ''),
+        lead_data.get('phone', ''),
+        lead_data.get('email', ''),
+        lead_data.get('property_address', ''),
+        lead_data.get('call_priority', ''),
+        lead_data.get('sell_timeline', ''),
+        lead_data.get('additional_notes', ''),
+        lead_data.get('occupancy_status', ''),
+        lead_data.get('call_reason', ''),
+        lead_data.get('intent', ''),
+    ]
+
+    sheets.values().append(
+        spreadsheetId=spreadsheet_id,
+        range=f"{worksheet_name}!A1",
+        valueInputOption='USER_ENTERED',
+        insertDataOption='INSERT_ROWS',
+        body={'values': [values]},
+    ).execute()
+
+
 def send_urgent_lead_email(lead_data: dict) -> bool:
     admin_email = os.environ.get('ADMIN_EMAIL', '').strip()
     if not admin_email:

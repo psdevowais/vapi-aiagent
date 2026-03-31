@@ -12,7 +12,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email
+from ember_apps.leads.google_sheets import append_lead_row, send_urgent_lead_email, append_normal_lead_row
 from ember_apps.leads.models import Lead
 
 from .models import AgentSettings, Call, TranscriptEvent
@@ -205,12 +205,9 @@ class VapiWebhookView(APIView):
             call_reason = (lead_data.get('call_reason') or '').strip()
             call_priority = (lead_data.get('call_priority') or '').strip()
             property_address = (lead_data.get('property_address') or lead_data.get('address') or '').strip()
-            property_type = (lead_data.get('property_type') or '').strip()
-            bedrooms = (lead_data.get('bedrooms') or '').strip()
-            bathrooms = (lead_data.get('bathrooms') or '').strip()
             occupancy_status = (lead_data.get('occupancy_status') or '').strip()
             sell_timeline = (lead_data.get('sell_timeline') or '').strip()
-            update_type = (lead_data.get('update_type') or '').strip()
+            intent = (lead_data.get('intent') or '').strip()
             additional_notes = (lead_data.get('additional_notes') or '').strip()
 
             if customer_name and phone and email:
@@ -222,32 +219,43 @@ class VapiWebhookView(APIView):
                     property_address=property_address,
                     call_reason=call_reason,
                     call_priority=call_priority,
-                    property_type=property_type,
-                    bedrooms=bedrooms,
-                    bathrooms=bathrooms,
                     occupancy_status=occupancy_status,
                     sell_timeline=sell_timeline,
-                    update_type=update_type,
+                    intent=intent,
                     additional_notes=additional_notes,
                 )
-                if created and call_priority.lower() == 'urgent':
-                    append_lead_row(
-                        [
-                            lead.customer_name,
-                            lead.property_address,
-                            lead.phone,
-                            lead.email,
-                            lead.call_priority,
-                            lead.created_at.isoformat(),
-                        ]
-                    )
-                    send_urgent_lead_email({
-                        'customer_name': lead.customer_name,
-                        'phone': lead.phone,
-                        'email': lead.email,
-                        'property_address': lead.property_address,
-                        'call_priority': lead.call_priority,
-                    })
+                if created:
+                    if call_priority.lower() == 'urgent':
+                        append_lead_row(
+                            [
+                                lead.customer_name,
+                                lead.property_address,
+                                lead.phone,
+                                lead.email,
+                                lead.call_priority,
+                                lead.created_at.isoformat(),
+                            ]
+                        )
+                        send_urgent_lead_email({
+                            'customer_name': lead.customer_name,
+                            'phone': lead.phone,
+                            'email': lead.email,
+                            'property_address': lead.property_address,
+                            'call_priority': lead.call_priority,
+                        })
+                    else:
+                        append_normal_lead_row({
+                            'customer_name': lead.customer_name,
+                            'phone': lead.phone,
+                            'email': lead.email,
+                            'property_address': lead.property_address,
+                            'call_priority': lead.call_priority,
+                            'sell_timeline': lead.sell_timeline,
+                            'additional_notes': lead.additional_notes,
+                            'occupancy_status': lead.occupancy_status,
+                            'call_reason': lead.call_reason,
+                            'intent': lead.intent,
+                        })
 
         return Response({'ok': True})
 
