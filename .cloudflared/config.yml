@@ -1,0 +1,28 @@
+tunnel: a95beb4c-c437-49fb-a4b8-e7c94f58fc15
+credentials-file: C:\Users\pt078\.cloudflared\a95beb4c-c437-49fb-a4b8-e7c94f58fc15.json
+
+ingress:
+  - hostname: agent.propstarportal.com
+    path: /_next/webpack-hmr
+    service: http://localhost:3000
+    originRequest:
+      http2Origin: false
+      noTLSVerify: true
+  - hostname: agent.propstarportal.com
+    path: /ws
+    service: http://localhost:8000
+    originRequest:
+      http2Origin: false
+      noTLSVerify: true
+  - hostname: agent.propstarportal.com
+    path: /api
+    service: http://localhost:8000
+    originRequest:
+      http2Origin: false
+      noTLSVerify: true
+  - hostname: agent.propstarportal.com
+    service: http://localhost:3000
+    originRequest:
+      http2Origin: false
+      noTLSVerify: true
+  - service: http_status:404
