@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 export type ChatMessage = {
+  id?: string;
   role: "user" | "agent";
   text: string;
   ts: number;

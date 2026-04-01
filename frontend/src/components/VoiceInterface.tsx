@@ -15,6 +15,7 @@ type WsEvent =
   | { type: "bound"; call_id: string }
   | {
       type: "transcript_event";
+      id: string;
       call_id: string;
       role: string;
       text: string;
@@ -89,24 +90,41 @@ export function VoiceInterface() {
     if (!text) return;
 
     setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (!last) return [next];
-
-      const withinWindow = Math.abs(next.ts - last.ts) <= 2500;
-      const sameRole = last.role === next.role;
-      if (withinWindow && sameRole) {
-        const lastText = (last.text || "").trim();
-        if (text.startsWith(lastText) || lastText.startsWith(text)) {
-          const mergedText = text.length >= lastText.length ? text : lastText;
-          return [...prev.slice(0, -1), { ...last, text: mergedText, ts: next.ts }];
+      // If we have an id, check for existing message with same id
+      if (next.id) {
+        const existingIdx = prev.findIndex((m) => m.id === next.id);
+        if (existingIdx !== -1) {
+          // Update existing message
+          const updated = [...prev];
+          updated[existingIdx] = { ...updated[existingIdx], text, ts: next.ts };
+          return updated;
         }
       }
 
+      const last = prev[prev.length - 1];
+      if (!last) return [{ ...next, id: next.id || `msg-${Date.now()}` }];
+
+      const withinWindow = Math.abs(next.ts - last.ts) <= 3000;
+      const sameRole = last.role === next.role;
+
+      // If same role within 3 seconds, merge/update
+      if (withinWindow && sameRole) {
+        const lastText = (last.text || "").trim();
+        // Check if texts overlap or one extends the other
+        if (text.startsWith(lastText) || lastText.startsWith(text) || lastText.includes(text) || text.includes(lastText)) {
+          const mergedText = text.length >= lastText.length ? text : lastText;
+          // Keep the same id if merging with last message
+          const mergedId = last.id || next.id || `msg-${last.ts}`;
+          return [...prev.slice(0, -1), { ...last, id: mergedId, text: mergedText, ts: next.ts }];
+        }
+      }
+
+      // Check for exact duplicate
       if (withinWindow && sameRole && last.text.trim() === text) {
         return prev;
       }
 
-      return [...prev, next];
+      return [...prev, { ...next, id: next.id || `msg-${Date.now()}` }];
     });
   }
 
@@ -477,7 +495,7 @@ export function VoiceInterface() {
           }
           const role: ChatMessage["role"] =
             data.role === "assistant" || data.role === "agent" ? "agent" : "user";
-          appendOrMergeMessage({ role, text: data.text, ts: Date.now() });
+          appendOrMergeMessage({ id: data.id, role, text: data.text, ts: Date.now() });
           return;
         }
         if (data.type === "stt_partial") {

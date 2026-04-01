@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db.models import Count
 from django.utils.dateparse import parse_datetime
+from django.utils.timezone import now
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -166,12 +167,35 @@ class VapiWebhookView(APIView):
                             break
 
         if transcript_text:
-            TranscriptEvent.objects.create(
+            # Check for existing transcript from same role within last 3 seconds
+            # to avoid duplicates from streaming/partial transcripts
+            recent_cutoff = now() - timedelta(seconds=3)
+            existing = TranscriptEvent.objects.filter(
                 call=call,
                 role=transcript_role or 'unknown',
-                text=transcript_text,
-                occurred_at=occurred_at,
-            )
+                created_at__gte=recent_cutoff,
+            ).order_by('-created_at').first()
+
+            if existing:
+                # Update existing transcript if new text is longer or contains it
+                if len(transcript_text) > len(existing.text) or existing.text in transcript_text:
+                    existing.text = transcript_text
+                    if occurred_at:
+                        existing.occurred_at = occurred_at
+                    existing.save(update_fields=['text', 'occurred_at', 'updated_at'])
+                    event_id = existing.id
+                else:
+                    # Existing text is longer, skip this duplicate
+                    event_id = existing.id
+            else:
+                # Create new transcript event
+                new_event = TranscriptEvent.objects.create(
+                    call=call,
+                    role=transcript_role or 'unknown',
+                    text=transcript_text,
+                    occurred_at=occurred_at,
+                )
+                event_id = new_event.id
 
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
@@ -179,6 +203,7 @@ class VapiWebhookView(APIView):
                 {
                     'type': 'transcript.event',
                     'payload': {
+                        'id': str(event_id),
                         'call_id': str(call.id),
                         'role': transcript_role or 'unknown',
                         'text': transcript_text,
