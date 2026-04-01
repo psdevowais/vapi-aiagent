@@ -1,9 +1,30 @@
+'use client';
+
+import { useEffect, useState } from "react";
+
 import { BarChart } from "@/components/BarChart";
 import { Shell } from "@/components/Shell";
-import { getAnalytics } from "@/lib/api";
+import { getAnalytics, AnalyticsSummary } from "@/lib/api";
+import { withAuth } from "@/lib/withAuth";
 
-export default async function AnalyticsPage() {
-  const summary = await getAnalytics();
+function AnalyticsPage() {
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAnalytics()
+      .then(setSummary)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !summary) {
+    return (
+      <Shell>
+        <div className="text-center py-12 text-zinc-600">Loading...</div>
+      </Shell>
+    );
+  }
 
   const callsByDay = summary.calls_by_day ?? [];
   const data = callsByDay.map((d) => ({
@@ -41,3 +62,5 @@ export default async function AnalyticsPage() {
     </Shell>
   );
 }
+
+export default withAuth(AnalyticsPage);

@@ -1,7 +1,10 @@
+'use client';
+
 import { Shell } from "@/components/Shell";
 import { VoiceInterface } from "@/components/VoiceInterface";
+import { withAuth } from "@/lib/withAuth";
 
-export default function HomePage() {
+function HomePage() {
   return (
     <Shell>
       <div className="mb-6">
@@ -14,3 +17,5 @@ export default function HomePage() {
     </Shell>
   );
 }
+
+export default withAuth(HomePage);

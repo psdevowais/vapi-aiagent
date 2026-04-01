@@ -1,7 +1,10 @@
+'use client';
+
 import { Shell } from "@/components/Shell";
 import { SettingsClient } from "@/app/settings/SettingsClient";
+import { withAuth } from "@/lib/withAuth";
 
-export default function SettingsPage() {
+function SettingsPage() {
   return (
     <Shell>
       <div className="mb-6">
@@ -13,3 +16,5 @@ export default function SettingsPage() {
     </Shell>
   );
 }
+
+export default withAuth(SettingsPage);

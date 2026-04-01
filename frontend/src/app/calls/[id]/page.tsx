@@ -1,15 +1,35 @@
+'use client';
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { Shell } from "@/components/Shell";
-import { getCall } from "@/lib/api";
+import { getCall, CallDetail } from "@/lib/api";
+import { withAuth } from "@/lib/withAuth";
 
-export default async function CallDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const call = await getCall(id);
+function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [call, setCall] = useState<CallDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [callId, setCallId] = useState<string>("");
+
+  useEffect(() => {
+    params.then((p) => {
+      setCallId(p.id);
+      getCall(p.id)
+        .then(setCall)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    });
+  }, [params]);
+
+  if (loading || !call) {
+    return (
+      <Shell>
+        <div className="text-center py-12 text-zinc-600">Loading...</div>
+      </Shell>
+    );
+  }
+
   const transcript = call.transcript_events ?? [];
   const leads = call.leads ?? [];
   const lead = leads[0] ?? null;
@@ -162,3 +182,5 @@ export default async function CallDetailPage({
     </Shell>
   );
 }
+
+export default withAuth(CallDetailPage);

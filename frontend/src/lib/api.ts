@@ -58,11 +58,18 @@ export type AgentSettings = {
   tts_model: string;
 };
 
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAuthToken();
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Token ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
